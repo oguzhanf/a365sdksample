@@ -1,0 +1,123 @@
+{
+  "name": "agentharness",
+  "services": {
+    "mongodb": {
+      "image": "mongo:7.0.26@sha256:8c3ce64d1a433bf57ea79035b48a38ea3e532997a1328fe3266e2e2e8bfb41b6",
+      "restart": "unless-stopped",
+      "environment": {
+        "MONGO_INITDB_ROOT_USERNAME": "gravitee",
+        "MONGO_INITDB_ROOT_PASSWORD_FILE": "/run/secrets/mongodb-password"
+      },
+      "volumes": ["mongo-data:/data/db", "mongo-config-data:/data/configdb", "./private/mongodb-password:/run/secrets/mongodb-password:ro"],
+      "networks": ["storage"],
+      "healthcheck": {
+        "test": ["CMD", "mongosh", "--quiet", "--eval", "const a=db.getSiblingDB('admin'); if(!a.auth('gravitee',require('fs').readFileSync('/run/secrets/mongodb-password','utf8').trim())) quit(1); quit(a.runCommand({ping:1}).ok ? 0 : 1)"],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 30
+      },
+      "mem_limit": "2g",
+      "logging": { "driver": "local", "options": { "max-size": "10m", "max-file": "3" } }
+    },
+    "elasticsearch": {
+      "image": "docker.elastic.co/elasticsearch/elasticsearch:8.16.1@sha256:500b04e9282aeffd083fb8f917ee2c309c99f76c095c79681bd77ab37d6886e6",
+      "restart": "unless-stopped",
+      "environment": {
+        "discovery.type": "single-node",
+        "xpack.security.enabled": "true",
+        "ELASTIC_PASSWORD_FILE": "/run/secrets/elasticsearch-password",
+        "ES_JAVA_OPTS": "-Xms1g -Xmx1g"
+      },
+      "volumes": [
+        "elastic-data:/usr/share/elasticsearch/data",
+        "./private/elasticsearch-password:/run/secrets/elasticsearch-password:ro",
+        "./private/elasticsearch-health.conf:/run/secrets/elasticsearch-health.conf:ro"
+      ],
+      "networks": ["storage"],
+      "healthcheck": {
+        "test": ["CMD", "curl", "--config", "/run/secrets/elasticsearch-health.conf", "--fail", "--silent", "--output", "/dev/null", "http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s"],
+        "interval": "10s",
+        "timeout": "10s",
+        "retries": 40,
+        "start_period": "30s"
+      },
+      "mem_limit": "3g",
+      "ulimits": { "memlock": { "soft": -1, "hard": -1 }, "nofile": { "soft": 65536, "hard": 65536 } },
+      "logging": { "driver": "local", "options": { "max-size": "10m", "max-file": "3" } }
+    },
+    "management-api": {
+      "image": "graviteeio/apim-management-api:4.12.0@sha256:151e962e3821010d9463e0a695d62fb5160236c9c2d050f22702c6de59136309",
+      "restart": "unless-stopped",
+      "environment": { "JAVA_OPTS": "-Xms512m -Xmx1536m" },
+      "depends_on": { "mongodb": { "condition": "service_healthy" }, "elasticsearch": { "condition": "service_healthy" } },
+      "volumes": [
+        "./private/management.yml:/opt/graviteeio-management-api/config/gravitee.yml:ro",
+        "./plugins/gravitee-policy-request-validation-1.15.1.zip:/opt/graviteeio-management-api/plugins/gravitee-policy-request-validation-1.15.1.zip:ro",
+        "management-data:/opt/graviteeio-management-api/data"
+      ],
+      "networks": ["storage", "control"],
+      "mem_limit": "3g",
+      "logging": { "driver": "local", "options": { "max-size": "10m", "max-file": "3" } }
+    },
+    "gateway": {
+      "image": "graviteeio/apim-gateway:4.12.0@sha256:4228a330515e4bff76e0d2734fab3e8a8f82a8c050f9b2a5265c4677db709aef",
+      "restart": "unless-stopped",
+      "environment": { "JAVA_OPTS": "-Xms512m -Xmx1536m" },
+      "depends_on": { "mongodb": { "condition": "service_healthy" }, "elasticsearch": { "condition": "service_healthy" }, "internal-api": { "condition": "service_started" } },
+      "volumes": [
+        "./private/gateway.yml:/opt/graviteeio-gateway/config/gravitee.yml:ro",
+        "./plugins/gravitee-policy-request-validation-1.15.1.zip:/opt/graviteeio-gateway/plugins/gravitee-policy-request-validation-1.15.1.zip:ro"
+      ],
+      "networks": ["storage", "control", "backend"],
+      "mem_limit": "3g",
+      "logging": { "driver": "local", "options": { "max-size": "10m", "max-file": "3" } }
+    },
+    "console": {
+      "image": "graviteeio/apim-management-ui:4.12.0@sha256:3c9bc765b01504dee6a878b2003353d361c07cb4c5c0a02e4b20783e2462a797",
+      "restart": "unless-stopped",
+      "environment": { "MGMT_API_URL": "${PUBLIC_URL}/management/organizations/DEFAULT/environments/DEFAULT/" },
+      "depends_on": ["management-api"],
+      "networks": ["control"],
+      "mem_limit": "256m",
+      "logging": { "driver": "local", "options": { "max-size": "10m", "max-file": "3" } }
+    },
+    "internal-api": {
+      "image": "agentharness-internal-api:deployment",
+      "build": { "context": "./internal-api" },
+      "restart": "unless-stopped",
+      "environment": { "ASPNETCORE_ENVIRONMENT": "Production", "ASPNETCORE_HTTP_PORTS": "8080", "TMPDIR": "/run/agentharness" },
+      "volumes": ["/var/lib/agentharness-docker/backend:/app/data"],
+      "networks": ["backend"],
+      "read_only": true,
+      "tmpfs": ["/run/agentharness:rw,noexec,nosuid,size=16m"],
+      "cap_drop": ["ALL"],
+      "security_opt": ["no-new-privileges:true"],
+      "mem_limit": "256m",
+      "logging": { "driver": "local", "options": { "max-size": "10m", "max-file": "3" } }
+    },
+    "caddy": {
+      "image": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
+      "restart": "unless-stopped",
+      "ports": ["80:80", "443:443"],
+      "environment": { "PUBLIC_HOST": "${PUBLIC_HOST}", "ACME_EMAIL": "${ACME_EMAIL}" },
+      "volumes": ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy-data:/data", "caddy-config:/config"],
+      "networks": ["control"],
+      "depends_on": ["console", "management-api", "gateway"],
+      "mem_limit": "256m",
+      "logging": { "driver": "local", "options": { "max-size": "10m", "max-file": "3" } }
+    }
+  },
+  "networks": {
+    "control": { "name": "agentharness-control" },
+    "storage": { "name": "agentharness-storage", "internal": true },
+    "backend": { "name": "agentharness-backend", "internal": true }
+  },
+  "volumes": {
+    "mongo-data": {},
+    "mongo-config-data": {},
+    "elastic-data": {},
+    "management-data": {},
+    "caddy-data": {},
+    "caddy-config": {}
+  }
+}

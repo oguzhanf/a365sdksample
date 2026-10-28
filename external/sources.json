@@ -1,0 +1,22 @@
+{
+  "samples": {
+    "repository": "https://github.com/microsoft/Agent365-Samples",
+    "commit": "44eeeea2572a6600f69c4cd996cbf3a025637743",
+    "license": "MIT",
+    "dotnetSamples": [
+      "dotnet/agent-framework/sample-agent",
+      "dotnet/semantic-kernel/sample-agent",
+      "dotnet/autonomous/github-trending/sample-agent",
+      "dotnet/w365-computer-use/sample-agent"
+    ]
+  },
+  "relatedMicrosoftRepositories": [
+    "https://github.com/microsoft/Agent365-dotnet",
+    "https://github.com/microsoft/Agents-for-net",
+    "https://github.com/microsoft/Agent365-devTools",
+    "https://github.com/microsoft/agent365-skills",
+    "https://github.com/microsoft/windows-365-for-agents",
+    "https://github.com/microsoft/agent-framework",
+    "https://github.com/microsoft/semantic-kernel"
+  ]
+}

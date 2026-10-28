@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <UserSecretsId>agentharness-agent-harness</UserSecretsId>
+    <NoWarn>$(NoWarn);SKEXP0001;SKEXP0010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.AI.OpenAI" Version="2.7.0-beta.2" />
+    <PackageReference Include="Azure.Identity" Version="1.17.2" Aliases="global,ObservabilityIdentity" />
+    <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.8.0" />
+    <PackageReference Include="Microsoft.Agents.A365.Notifications" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Agents.A365.Tooling.Extensions.AgentFramework" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Agents.A365.Tooling.Extensions.SemanticKernel" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Agents.AI" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="4.16.1" />
+    <PackageReference Include="Microsoft.OpenTelemetry" Version="1.0.6" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.71.0" />
+    <PackageReference Include="OpenWeatherMapSharp" Version="4.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\external\Agent365-Samples\dotnet\agent-framework\sample-agent\Observability\*.cs" Link="Samples\Observability\%(Filename)%(Extension)" />
+    <Compile Include="..\..\external\Agent365-Samples\dotnet\agent-framework\sample-agent\Tools\DateTimeFunctionTool.cs" Link="Samples\DateTimeFunctionTool.cs" />
+    <Compile Include="..\..\external\Agent365-Samples\dotnet\agent-framework\sample-agent\AspNetExtensions.cs" Link="Samples\AspNetExtensions.cs" />
+    <Compile Include="..\..\external\Agent365-Samples\dotnet\w365-computer-use\sample-agent\ComputerUse\**\*.cs" Link="Samples\ComputerUse\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\..\external\Agent365-Samples\dotnet\w365-computer-use\sample-agent\Telemetry\*.cs" Exclude="..\..\external\Agent365-Samples\dotnet\w365-computer-use\sample-agent\Telemetry\ObservabilityServiceCollectionExtensions.cs;..\..\external\Agent365-Samples\dotnet\w365-computer-use\sample-agent\Telemetry\A365OtelWrapper.cs" Link="Samples\Telemetry\%(Filename)%(Extension)" />
+    <Compile Include="..\..\external\Agent365-Samples\dotnet\w365-computer-use\sample-agent\ScreenShare\ScreenShareUrlExtractor.cs" Link="Samples\ScreenShareUrlExtractor.cs" Condition="Exists('..\..\external\Agent365-Samples\dotnet\w365-computer-use\sample-agent\ScreenShare\ScreenShareUrlExtractor.cs')" />
+    <EmbeddedResource Include="..\..\external\Agent365-Samples\dotnet\**\*.cs" Exclude="..\..\external\Agent365-Samples\dotnet\**\obj\**;..\..\external\Agent365-Samples\dotnet\**\bin\**">
+      <LogicalName>Upstream/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\..\external\Agent365-Samples\dotnet\**\*.csproj">
+      <LogicalName>Upstream/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="AgentHarness.csproj" LogicalName="Harness/AgentHarness.csproj" />
+    <EmbeddedResource Include="..\..\external\Agent365-Samples\LICENSE.md" LogicalName="Upstream/LICENSE" />
+    <EmbeddedResource Include="**\*.cs" Exclude="obj\**;bin\**">
+      <LogicalName>Harness/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

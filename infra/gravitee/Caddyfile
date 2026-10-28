@@ -1,0 +1,29 @@
+{
+	email {$ACME_EMAIL}
+	admin off
+	servers {
+		protocols h1
+	}
+}
+
+{$PUBLIC_HOST} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		Alt-Svc "clear"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+	@gateway path /gateway/internal /gateway/internal/*
+	handle @gateway {
+		reverse_proxy gateway:8082
+	}
+	@management path /management /management/*
+	handle @management {
+		reverse_proxy management-api:8083
+	}
+	handle {
+		reverse_proxy console:8080
+	}
+}
